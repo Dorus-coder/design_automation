@@ -1,3 +1,9 @@
+# directories
+local/
+# files
+reference_vessels.py
+# data
+training_set.csv
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

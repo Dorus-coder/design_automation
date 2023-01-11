@@ -1,9 +1,15 @@
 # directories
 local/
+depricated/
 # files
 reference_vessels.py
+vessel_env.log
+*.csv
+*.txt
 # data
 training_set.csv
+files/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

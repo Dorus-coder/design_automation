@@ -1,11 +1,13 @@
+"""
+This modules creates cross sectional frames
+
+author: Dorus Boogaard
+"""
 import numpy as np
-from pyvista import Plotter, Line, CircularArc
-from dataclasses import dataclass
 from geomdl import BSpline
 from geomdl import utilities
-from geomdl.visualization import VisMPL
 from build_vessel.parameters import CrossSectionFrames
-from scipy.integrate import simpson, trapezoid, quad
+from scipy.integrate import simpson
 
 
 class CrossSection():

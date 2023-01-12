@@ -23,6 +23,7 @@ class Block:
     lwl = 200
     laft = 25
     lhold = 145
+    lfore = lwl - laft - lhold
     boa = 16
     draft = 10
     depth = draft + np.ceil(df.loc[df["length"] == loa].values[0][1] / 1000) # "A" type ship

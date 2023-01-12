@@ -1,140 +1,35 @@
-from build_vessel.midship import CrossSection
+from build_vessel.cross_section import CrossSection
 from build_vessel.waterplane import WaterPlane
 from build_vessel.main_deck import MainDeck
 from build_vessel.longitudinal import Longitudinal
 import numpy as np
 from pyvista import KochanekSpline, PolyData, Plotter
-from dataclasses import dataclass, field
-import logging
-from build_vessel.transom import Transom
+from dataclasses import dataclass
 from build_vessel.parameters import block, longitudinals, cross_frames, waterlines
-from copy import deepcopy
-from scipy.integrate import simpson
-from scipy.interpolate import interp1d
-logging.basicConfig(filename='vessel_env.log', level=logging.INFO, format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
-
-def modify_control_points(ctrlpts : list, xyz : int, value : float):
-    new_ctrlpts = deepcopy(ctrlpts)
-    for _, v in enumerate(new_ctrlpts):
-        v[xyz] = value
-    return new_ctrlpts
-
-def lin_interpolate(arr, x, z_max):
-    """The middle control point is the corner of the shape\n
-    y(x)  =  y1  +  (x - x1) * (y2 - y1) / (x2 - x1)
-    """
-    mid1_idx = len(arr[0]) // 2
-    mid2_idx = len(arr[1]) // 2
-    mid_ctrlpt = arr[0][mid1_idx], arr[1][mid2_idx] 
-    x1, x2 = mid_ctrlpt[0][0], mid_ctrlpt[1][0] # All control points are defined for x
-    y = mid_ctrlpt[0][1] + (x - x1) * ((mid_ctrlpt[1][1] - mid_ctrlpt[0][1]) / (x2 - x1))
-    z = mid_ctrlpt[0][2] + (x - x1) * ((mid_ctrlpt[1][2] - mid_ctrlpt[0][2]) / (x2 -x1))
-    
-    if len(arr[1]) > len(arr[0]):
-        radius_ctrl = arr[1][1], arr[1][3]
-    else: radius_ctrl = arr[0][1], arr[0][3]
-
-    y_radius1 = (x - x1) * ((radius_ctrl[0][1]) / (x2 - x1))
-    z_radius2 = z_max + (x - x1) * ((radius_ctrl[1][2] - z_max) / (x2 - x1))
-    return [[x, 0, z], [x, y_radius1, z], [x, y, z], [x, y, z_radius2], [x, y, z_max]]
-
-def new_cross_fore(waterline : list, wbfrm : list, x : int) -> list:
-    wl = np.array(waterline)
-    wbfrm = np.array(wbfrm)
-    new_frame = deepcopy(wbfrm)
-    new_frame[:,0] = wl[:,0][x]
-    
-    y = new_frame[:,1][::-1]
-    diff = wl[:,1][0] - wl[:,1][x]
-    for idx, val in enumerate(y):
-        if val > wl[:,1][x]:
-            y[idx] -= diff
-        if y[idx] < 0:
-            y[idx] = 0
-    new_frame[:,1] = y[::-1]
-    return new_frame
-
-
-
-
-class Area:
-    def __init__(self, ul : int, n_frames : int) -> None:
-        self.ul = ul
-        self._n_evalpts = 100
-        self._memory = np.empty([n_frames, self.n_evalpts, 3])
-        self.section_area = np.empty([n_frames, 2])
-
-    @property
-    def n_evalpts(self):
-        return self._n_evalpts
-
-    @n_evalpts.setter
-    def n_evalpts(self, number):
-        self._n_evalpts = number
-
-    @property
-    def memory(self):
-        return self._memory
-
-    @memory.setter
-    def memory(self, input : tuple, copy=False):
-        if not copy:
-            try:
-                frame, idx = input
-            except:
-                raise ValueError("Pass an iterable with row and idx.")
-            else:
-                self._memory[idx] = np.array(frame)
-        else:
-            self._memory = input
-
-    def area(self) -> None:
-        """calculate the area and set the x location and frame area in self.section_area.
-        """
-        for idx, frame in enumerate(self.memory):
-            # z = self.ul - frame[:,2]
-            self.section_area[idx] = [frame[0][0], simpson(frame[:,1], frame[:,2], even='last')]
-
-    def volume(self):
-        d = self.section_area[1][0] - self.section_area[0][0] 
-        sum_of_arr = 0
-
-        for idx, val in enumerate(self.section_area[:,1]):
-            if idx == 0:
-                sum_of_arr += val
-            elif idx == len(self.section_area[:,1]) - 1:
-                sum_of_arr += val
-            elif idx % 2 == 0:
-                sum_of_arr += val * 2
-            elif idx % 2 == 1:
-                sum_of_arr += val * 4
-        return d  * sum_of_arr / 3
-
-    def volume_scipy(self):
-        x = np.linspace(0, self.section_area[:,0][-1] - self.section_area[:,0][0] , len(self.section_area[:,1]))
-        return simpson(self.section_area[:,1], x)
-
-    def statical_moment(self):
-        return np.sum(self.section_area[:,0] * self.section_area[:,1])
-
-    def lcb(self):
-        return self.statical_moment() / self.volume_scipy()
-
-    def total_area(self):
-        return np.sum(self.section_area[:,1])
-
-def prismatic_coefficient(volume : list, area_wbfrm : float):
-    return sum(volume) / (area_wbfrm * block.lwl)
+from build_vessel.properties import Properties
+from build_vessel.helpers import modify_control_points, lin_interpolate, new_cross_fore
 
 @dataclass
-class Arguments:
-    c_m : float
-    c_wp : float 
-    transom_area : float
-    LTOTAL : float
-    LOA : float
-    freeboard : float
-
+class HMInput:
+    loa: float
+    lpp: float
+    B: float
+    t_f: float # draft fore
+    t_a: float # draft aft
+    displ: float
+    lcb: float # Longitudinal center of bouyancy in percentage forward of 1/2 lpp
+    c_m: float # midship section coefficient 
+    c_wp: float # waterplane area coefficient
+    a_t: float # transom area
+    c_prism: float # prismatic coefficient 
+    c_b: float
+    ie: float # half angle of entrance 
+    c_stern: int = 0 # stern shape parameter
+    # bulb optional
+    h_b: float = 0.0 # centre of bulb area above keel [m]
+    a_bt: float = 0.0 # transverse bulb area [m^2]
+    h_b: float = 0.0 # centre of bulb area above keel [m]
+    a_bt: float = 0.0 # transverse bulb area [m^2]
 
 def main():
     # web frame
@@ -155,9 +50,9 @@ def main():
     wp_points = wp.water_plane_points
 
     # transom
-    transom = Transom(block)
-    transom_points = transom.transom_points
-
+    transom = CrossSection(cross_frames.transom)
+    transom_points = transom.points()
+    
     # FPP
     fpp = CrossSection(cross_frames.fpp_frame)
     fpp_points = fpp.points()
@@ -166,14 +61,13 @@ def main():
     long = Longitudinal(longitudinals.center)
     long_points = long.points()
 
-
-    # print(points_list)
     pl = Plotter()
     c, t, b = (-0.2, 1, 0)
 
     HEIGHT = block.draft
+    
     # aft
-    aft_area = Area(HEIGHT, block.laft)
+    aft_area = Properties(HEIGHT, block.laft)
     for x in range(0, block.laft):
         _ctrpts = lin_interpolate((cross_frames.transom, ms_control_points), x, HEIGHT)
         frame = CrossSection(_ctrpts)
@@ -195,7 +89,6 @@ def main():
     print(f"lcb {aft_area.lcb() =:.2f}")
     print()
 
-
     # points of the forward waterplane
     wp_fore = wp.forward
     
@@ -205,7 +98,7 @@ def main():
     # ms_control_points_2[-1][-1] = block.depth
     ms_2 = CrossSection(ms_control_points_2)
     ms_2_points = np.array(ms_2.points())
-    forward_area = Area(block.depth, len(wp_fore))
+    forward_area = Properties(block.depth, len(wp_fore))
 
     for x in range(len(wp_fore)):
         points = new_cross_fore(wp_fore, ms_2_points, x)
@@ -222,7 +115,7 @@ def main():
     print()
 
     # Midship
-    mid = Area(block.draft, 2)
+    mid = Properties(block.draft, 2)
     mid.memory = ms_1_points, 0
     mid.memory = ms_2_points, 1
     mid.area()
@@ -232,15 +125,16 @@ def main():
 
     # Total area
     arrays = np.concatenate((aft_area.memory, mid.memory, forward_area.memory), axis=0)
-    total_area = Area(block.draft, len(arrays))
+    total_area = Properties(block.draft, len(arrays))
     total_area.memory = arrays, True
     total_area.area()
-    print(f"{total_area.volume_scipy() =}")
-    print(f"{total_area.statical_moment() =}")
+    print(f"{total_area.volume_scipy() = :.2f}")
+    print(f"{total_area.statical_moment() = :.2f}")
     print(f"{total_area.lcb() =}")
-    volume_list = [aft_area.volume(), mid.volume_scipy(), forward_area.volume_scipy()]
-    c_prism = prismatic_coefficient(volume_list, wbfrm.area)
-    print(f"the prismatic coefficient is {c_prism}")
+    print(f"immersed{total_area.transom_area = }")
+    c_prism = total_area.prismatic_coefficient(wbfrm.area)
+    print(f"the prismatic coefficient is {c_prism = :.2f}")
+    print(f"{total_area.ie() = }")
 
     kochanek_spline_1 = KochanekSpline(wbfrm_points, tension=[t, t, t], continuity=[c, c, c], n_points=1000)
     kochanek_spline_2 = KochanekSpline(ms_1_points, tension=[t, t, t], continuity=[c, c, c], n_points=1000)
@@ -277,22 +171,20 @@ def main():
     color="k",
     point_size=1,
     render_points_as_spheres=True,
-)
+    )
     pl.add_mesh(PolyData(md_points),
     color="k",
     point_size=1,
     render_points_as_spheres=True,
-)
+    )
     pl.add_mesh(PolyData(long_points),
     color="k",
     point_size=1,
     render_points_as_spheres=True,
-)
+    )
 
     pl.show_bounds(location='outer', font_size=20, use_2d=True)
     pl.show()
-
-
 
 if __name__ == '__main__':
     main()

@@ -1,6 +1,8 @@
 import numpy as np
 import math
+from dataclasses import dataclass
 
+@dataclass
 class ShipCharasteristics:
     loa = 205.0
     lpp = 200
@@ -37,8 +39,14 @@ class HoltropMennen:
         self.G = 9.81
         self.GAMMA = 0.1883
 
+    def total_resistance(self):
+        """test case 1793
+        """
+        return sum((self.friction_res() * self.form_factor(), self.wave_res(), self.bulb_res(), self.ra(), self.rtr()))
+
     def friction_res(self):
         """frictional resistance according to the ITTC-1957 formula
+        test case 869.63
         """
         return self.cf * 0.5 * self.RHO * self.velocity ** 2 * self.wetted_area()
 
@@ -273,8 +281,7 @@ class HoltropMennen:
     
 
 hm = HoltropMennen()
-print(f"{hm.c_a() = }")
-print(f"{hm.ra() = }")
-print(f"{hm.cf = }")
-print(f"{hm.rn = }")
-print(f"{np.log10(hm.rn) = }")
+print(f"{hm.friction_res() = }")
+print(f"{hm.form_factor() = }")
+print(f"{hm.rtr() = }")
+print(f"{hm.total_resistance() = }")

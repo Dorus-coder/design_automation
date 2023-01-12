@@ -5,7 +5,7 @@ from geomdl import BSpline
 from geomdl import utilities
 from geomdl.visualization import VisMPL
 from scipy.integrate import simpson
-from build_vessel.BSpline import B_Spline
+
 
 class Bulb:
     def __init__(self) -> None:
@@ -51,12 +51,13 @@ class Bulb:
     def bulb_points(self):
         return self.b_spline().evalpts
 
-class Longitudinal(B_Spline):
+class Longitudinal():
     def __init__(self, ctrlpts : Longitudinals) -> None:
-        super().__init__()
         self._points_aft = ctrlpts[0]
         self.bulb_points = ctrlpts[1]
         self._points_fore = ctrlpts[2]
+        self.degree = 2 # use setter for this
+        self.delta = 0.01
 
     @property
     def points_aft(self):
@@ -75,10 +76,19 @@ class Longitudinal(B_Spline):
         self._points_fore = points
 
     def points(self):
-        self.ctrlpts = self.bulb_points
-        self.degree = 2
         bulb_points = self.b_spline().evalpts
         return np.vstack((self.points_aft, bulb_points, self.points_fore))
+
+    def b_spline(self) -> BSpline.Curve:
+        curve = BSpline.Curve()
+        curve.degree = self.degree
+        curve.ctrlpts = self.bulb_points
+        curve.knotvector = utilities.generate_knot_vector(curve.degree, len(curve.ctrlpts))
+        curve.delta = self.delta 
+        return curve
+
+    def points(self):
+        return self.b_spline().evalpts
 
 if __name__ == '__main__':
     from pyvista import KochanekSpline, PolyData, Plotter
@@ -91,9 +101,6 @@ if __name__ == '__main__':
 
     data_points = long.points()
     print(long.bulb_points)
-    x, y = data_points[:,0], data_points[:,1]
-    area = simpson(y, x)
-    print(f"The waterplane area is {area}")
     kochanek_spline = KochanekSpline(data_points, tension=[t, t, t], continuity=[c, c, c], n_points=1000)
 
 

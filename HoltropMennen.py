@@ -29,8 +29,8 @@ class ShipCharasteristics:
 
 
 class HoltropMennen:
-    def __init__(self): 
-        self.ship = ShipCharasteristics()
+    def __init__(self, ship: ShipCharasteristics): 
+        self.ship = ship
         self.mean_draft = (self.ship.t_a + self.ship.t_f) / 2
         self._lwl = self.ship.lpp 
         self.velocity = self.kn_to_ms(self.ship.velocity)
@@ -278,10 +278,10 @@ class HoltropMennen:
         # above equation causes major problems 
         return (5.68 - 0.6 * np.log10(self.rn)) * 10 ** -4
 
-    
-
-hm = HoltropMennen()
-print(f"{hm.friction_res() = }")
-print(f"{hm.form_factor() = }")
-print(f"{hm.rtr() = }")
-print(f"{hm.total_resistance() = }")
+if __name__ == "__main__":
+    ship = ShipCharasteristics()
+    hm = HoltropMennen(ship)
+    # print(f"{hm.friction_res() = }")
+    # print(f"{hm.form_factor() = }")
+    # print(f"{hm.rtr() = }")
+    print(f"1. {hm.total_resistance() = }")

@@ -5,7 +5,7 @@ author: Dorus Boogaard
 """
 
 import numpy as np
-from build_vessel.parameters import block ,Block # Block is just for typehinting
+from build_vessel.parameters import block
 from scipy.integrate import simpson
 
 class Properties:
@@ -50,7 +50,7 @@ class Properties:
     def transom_area(self):
         """immersed transom area
         """
-        return self.section_area[0][0]
+        return self.section_area[0][1]
 
     def volume(self) -> float:
         """This function is soon to be depricated.
@@ -85,7 +85,7 @@ class Properties:
     def prismatic_coefficient(self, area_wbfrm : float) -> float:
         return self.volume_scipy() / (area_wbfrm * block.lwl)
 
-    def block_coefficient(self, block: Block) -> float:
+    def block_coefficient(self) -> float:
         """Block coefficient defined at the draft.
         """
         return self.volume_scipy() / (block.lwl * block.boa * block.draft)

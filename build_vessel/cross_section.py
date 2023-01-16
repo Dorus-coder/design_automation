@@ -6,7 +6,7 @@ author: Dorus Boogaard
 import numpy as np
 from geomdl import BSpline
 from geomdl import utilities
-from build_vessel.parameters import CrossSectionFrames
+from parameters import CrossSectionFrames
 from scipy.integrate import simpson
 
 
@@ -16,6 +16,10 @@ class CrossSection():
         self._delta = 0.01
         self._ctrlpts = ctrlpts
 
+    def cross_section_coefficient(self):
+        y, z = np.max(np.array(self.points())[:,1]), np.max(np.array(self.points())[:,2])
+        return self.area / (y * z)
+
     @property
     def area(self) -> float:
         points = np.array(self.points())
@@ -24,7 +28,7 @@ class CrossSection():
 
     @property
     def delta(self):
-        return self._delta
+        return self._delta 
 
     @delta.setter
     def delta(self, delta : float):

@@ -1,10 +1,9 @@
 import numpy as np
 import logging
 from dataclasses import dataclass
-from build_vessel.parameters import Block, waterlines
+from parameters import Block, waterlines, block
 from geomdl import BSpline
 from geomdl import utilities
-from geomdl.visualization import VisMPL
 from scipy.integrate import simpson
 
 logging.basicConfig(filename='vessel_env.log', level=logging.INFO, format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
@@ -23,7 +22,7 @@ class WaterPlane:
 
 	@property
 	def c_wp(self) -> float:
-		lb = self.p.lwl * self.p.boa
+		lb = block.lwl * block.boa
 		return self.area / lb
 		
 

@@ -1,9 +1,9 @@
 import numpy as np
-from build_vessel.parameters import Longitudinals
+from parameters import Longitudinals
 from dataclasses import dataclass
 from geomdl import BSpline
 from geomdl import utilities
-from geomdl.visualization import VisMPL
+
 from scipy.integrate import simpson
 
 

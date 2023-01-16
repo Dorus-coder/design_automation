@@ -2,7 +2,7 @@ from dataclasses import dataclass
 import pandas as pd
 import numpy as np
 
-df = pd.read_csv("build_vessel\Rules\min_freeboard.csv")
+# df = pd.read_csv("build_vessel\Rules\min_freeboard.csv")
 """
 parametric properties of the bulb:
     * bulb length 
@@ -26,7 +26,7 @@ class Block:
     lfore = lwl - laft - lhold
     boa = 16
     draft = 10
-    depth = draft + np.ceil(df.loc[df["length"] == loa].values[0][1] / 1000) # "A" type ship
+    depth = draft + 2 #np.ceil(df.loc[df["length"] == loa].values[0][1] / 1000) # "A" type ship
     bilge_radius = 1
     ctrlpt_offset_forward = 7 # Work with offsets or let the algorithm figure it out?
     # transom

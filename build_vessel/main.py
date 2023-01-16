@@ -1,17 +1,17 @@
-from build_vessel.cross_section import CrossSection
-from build_vessel.waterplane import WaterPlane
-from build_vessel.main_deck import MainDeck
-from build_vessel.longitudinal import Longitudinal
+from cross_section import CrossSection
+from waterplane import WaterPlane
+from main_deck import MainDeck
+from longitudinal import Longitudinal
 import numpy as np
 from pyvista import KochanekSpline, PolyData, Plotter
 from dataclasses import dataclass
-from build_vessel.parameters import block, longitudinals, cross_frames, waterlines
-from build_vessel.properties import Properties
-from build_vessel.helpers import modify_control_points, lin_interpolate, new_cross_fore
+from parameters import block, longitudinals, cross_frames, waterlines
+from properties import Properties
+from helpers import modify_control_points, lin_interpolate, new_cross_fore
+
 
 @dataclass
 class HMInput:
-    loa: float
     lpp: float
     B: float
     t_f: float # draft fore
@@ -24,12 +24,13 @@ class HMInput:
     c_prism: float # prismatic coefficient 
     c_b: float
     ie: float # half angle of entrance 
+    velocity: float
     c_stern: int = 0 # stern shape parameter
     # bulb optional
-    h_b: float = 0.0 # centre of bulb area above keel [m]
-    a_bt: float = 0.0 # transverse bulb area [m^2]
-    h_b: float = 0.0 # centre of bulb area above keel [m]
-    a_bt: float = 0.0 # transverse bulb area [m^2]
+    h_b: float = 0.0001 # centre of bulb area above keel [m]
+    a_bt: float = 0.001 # transverse bulb area [m^2]
+    h_b: float = 0.0001 # centre of bulb area above keel [m]
+    a_bt: float = 0.0001 # transverse bulb area [m^2]
 
 def main():
     # web frame
@@ -131,11 +132,44 @@ def main():
     print(f"{total_area.volume_scipy() = :.2f}")
     print(f"{total_area.statical_moment() = :.2f}")
     print(f"{total_area.lcb() =}")
-    print(f"immersed{total_area.transom_area = }")
+    print(f"immersed {total_area.transom_area = }")
     c_prism = total_area.prismatic_coefficient(wbfrm.area)
     print(f"the prismatic coefficient is {c_prism = :.2f}")
     print(f"{total_area.ie() = }")
+    print(f"{wbfrm.cross_section_coefficient() = }")
+    
+    # Holtrop and Mennen input
+    hm_input = HMInput(lpp= block.lwl,
+                       B= block.boa * 2,
+                       t_f= block.draft,
+                       t_a= block.draft,
+                       displ= total_area.volume_scipy() * 2 * 1.025,
+                       lcb=total_area.lcb(),
+                       c_m=wbfrm.cross_section_coefficient(),
+                       c_wp=wp.c_wp,
+                       c_b=total_area.block_coefficient(),
+                       a_t=total_area.transom_area,
+                       c_prism= total_area.prismatic_coefficient(wbfrm.area),
+                       ie=total_area.ie(), 
+                       velocity=18                
+                      )
+    from HoltropMennen import HoltropMennen
+    resistance = HoltropMennen(hm_input)
+    print(f"1. {resistance.total_resistance() = :.2f}")
+    print(f"2. {resistance.bulb_res() = :.2f}")
 
+    # Visualization
+    def visualize(plot_points: list, plotter: Plotter):
+        for plot_point in plot_points:
+                KochanekSpline(plot_point, tension=[t, t, t], continuity=[c, c, c], n_points=1000)
+                plotter.add_mesh(plot_point, color='k')
+                plotter.add_mesh(PolyData(wbfrm_points),
+                color="k",
+                point_size=1,
+                render_points_as_spheres=True,
+                                )
+
+                                
     kochanek_spline_1 = KochanekSpline(wbfrm_points, tension=[t, t, t], continuity=[c, c, c], n_points=1000)
     kochanek_spline_2 = KochanekSpline(ms_1_points, tension=[t, t, t], continuity=[c, c, c], n_points=1000)
     kochanek_spline_3 = KochanekSpline(wp_points, tension=[t, t, t], continuity=[c, c, c], n_points=1000)

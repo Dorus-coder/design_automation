@@ -1,5 +1,4 @@
-import pandas as pd
-from build_vessel.parameters import Block
+from parameters import Block
 from geomdl import BSpline
 from geomdl import utilities
 from scipy.integrate import simpson

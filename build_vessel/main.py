@@ -69,7 +69,7 @@ def main():
     
     # aft
     aft_area = Properties(HEIGHT, block.laft)
-    for x in range(0, block.laft):
+    for x in np.arange(0, block.laft):
         _ctrpts = lin_interpolate((cross_frames.transom, ms_control_points), x, HEIGHT)
         frame = CrossSection(_ctrpts)
         
@@ -160,16 +160,19 @@ def main():
 
     # Visualization
     def visualize(plot_points: list, plotter: Plotter):
+        # global pl
         for plot_point in plot_points:
-                KochanekSpline(plot_point, tension=[t, t, t], continuity=[c, c, c], n_points=1000)
-                plotter.add_mesh(plot_point, color='k')
-                plotter.add_mesh(PolyData(wbfrm_points),
+                spline = KochanekSpline(plot_point, tension=[t, t, t], continuity=[c, c, c], n_points=1000)
+                plotter.add_mesh(spline, color='k')
+                plotter.add_mesh(PolyData(plot_point),
                 color="k",
                 point_size=1,
                 render_points_as_spheres=True,
                                 )
+                pl.show_bounds(location='outer', font_size=20, use_2d=True)
+                pl.show()
 
-                                
+    # visualize([wbfrm_points, ms_1_points, wp_points, transom_points, md_points, long_points, fpp_points], pl)                         
     kochanek_spline_1 = KochanekSpline(wbfrm_points, tension=[t, t, t], continuity=[c, c, c], n_points=1000)
     kochanek_spline_2 = KochanekSpline(ms_1_points, tension=[t, t, t], continuity=[c, c, c], n_points=1000)
     kochanek_spline_3 = KochanekSpline(wp_points, tension=[t, t, t], continuity=[c, c, c], n_points=1000)

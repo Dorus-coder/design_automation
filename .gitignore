@@ -9,7 +9,7 @@ vessel_env.log
 # data
 training_set.csv
 files/
-
+openAI/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

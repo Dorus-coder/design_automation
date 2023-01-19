@@ -5,7 +5,6 @@ from longitudinal import Longitudinal
 import numpy as np
 from pyvista import KochanekSpline, PolyData, Plotter
 from dataclasses import dataclass
-from parameters import block, longitudinals, cross_frames, waterlines
 from properties import Properties
 from helpers import modify_control_points, lin_interpolate, new_cross_fore
 
@@ -33,33 +32,39 @@ class HMInput:
     a_bt: float = 0.0001 # transverse bulb area [m^2]
 
 def main():
+    from build_vessel.parameters import CtrlPts, Block
+
+    # example vessel
+    block = Block()
+    cp = CtrlPts(block)
+
     # web frame
-    wbfrm = CrossSection(cross_frames.web_frame)
+    wbfrm = CrossSection(cp.cross_frames.web_frame)
     wbfrm_points = wbfrm.points()
 
     # midship section aft
-    ms_control_points = modify_control_points(cross_frames.web_frame, 0, block.laft)
+    ms_control_points = modify_control_points(cp.cross_frames.web_frame, 0, block.laft)
     ms_1 = CrossSection(ms_control_points)
     ms_1_points = ms_1.points()
 
     # main deck
     md = MainDeck(block)
     md_points = md.main_deck_points
-
+ 
     # waterplane area
-    wp = WaterPlane(waterlines.waterplane)
+    wp = WaterPlane(cp.waterlines.waterplane)
     wp_points = wp.water_plane_points
 
     # transom
-    transom = CrossSection(cross_frames.transom)
+    transom = CrossSection(cp.cross_frames.transom)
     transom_points = transom.points()
     
     # FPP
-    fpp = CrossSection(cross_frames.fpp_frame)
+    fpp = CrossSection(cp.cross_frames.fpp_frame)
     fpp_points = fpp.points()
 
     # longitudinal
-    long = Longitudinal(longitudinals.center)
+    long = Longitudinal(cp.longitudinals.center)
     long_points = long.points()
 
     pl = Plotter()
@@ -68,9 +73,10 @@ def main():
     HEIGHT = block.draft
     
     # aft
+    class 
     aft_area = Properties(HEIGHT, block.laft)
     for x in np.arange(0, block.laft):
-        _ctrpts = lin_interpolate((cross_frames.transom, ms_control_points), x, HEIGHT)
+        _ctrpts = lin_interpolate((cp.cross_frames.transom, ms_control_points), x, HEIGHT)
         frame = CrossSection(_ctrpts)
         
         p = frame.points()
@@ -133,9 +139,9 @@ def main():
     print(f"{total_area.statical_moment() = :.2f}")
     print(f"{total_area.lcb() =}")
     print(f"immersed {total_area.transom_area = }")
-    c_prism = total_area.prismatic_coefficient(wbfrm.area)
+    c_prism = total_area.prismatic_coefficient(wbfrm.area, block.lwl)
     print(f"the prismatic coefficient is {c_prism = :.2f}")
-    print(f"{total_area.ie() = }")
+    print(f"{total_area.ie(block.boa, block.lfore) = }")
     print(f"{wbfrm.cross_section_coefficient() = }")
     
     # Holtrop and Mennen input
@@ -146,11 +152,11 @@ def main():
                        displ= total_area.volume_scipy() * 2 * 1.025,
                        lcb=total_area.lcb(),
                        c_m=wbfrm.cross_section_coefficient(),
-                       c_wp=wp.c_wp,
-                       c_b=total_area.block_coefficient(),
+                       c_wp=wp.c_wp(block.lwl, block.boa),
+                       c_b=total_area.block_coefficient(block.lwl, block.boa, block.draft),
                        a_t=total_area.transom_area,
-                       c_prism= total_area.prismatic_coefficient(wbfrm.area),
-                       ie=total_area.ie(), 
+                       c_prism= total_area.prismatic_coefficient(wbfrm.area, block.lwl),
+                       ie=total_area.ie(block.boa, block.lfore), 
                        velocity=18                
                       )
     from HoltropMennen import HoltropMennen

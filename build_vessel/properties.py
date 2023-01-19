@@ -3,9 +3,7 @@ This module contains methods that calculate the properties of the ship.
 
 author: Dorus Boogaard
 """
-
 import numpy as np
-from build_vessel.parameters import block
 from scipy.integrate import simpson
 
 class Properties:
@@ -82,16 +80,16 @@ class Properties:
     def total_area(self) -> float:
         return np.sum(self.section_area[:,1])
 
-    def prismatic_coefficient(self, area_wbfrm : float) -> float:
-        return self.volume_scipy() / (area_wbfrm * block.lwl)
+    def prismatic_coefficient(self, area_wbfrm : float, lwl: float) -> float:
+        return self.volume_scipy() / (area_wbfrm * lwl)
 
-    def block_coefficient(self) -> float:
+    def block_coefficient(self, lwl, boa, draft) -> float:
         """Block coefficient defined at the draft.
         """
-        return self.volume_scipy() / (block.lwl * block.boa * block.draft)
+        return self.volume_scipy() / (lwl * boa * draft)
 
-    def ie(self):
+    def ie(self, boa, lfore):
         """half angle of entrance in degree
         """
         RAD = 180 / np.pi
-        return np.tanh(block.boa / block.lfore) * RAD
+        return np.tanh(boa / lfore) * RAD

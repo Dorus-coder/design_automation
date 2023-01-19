@@ -180,15 +180,24 @@ class CtrlPts:
                     [block.lwl, 3, 0],
                     [block.lwl, 3, block.draft],
                     bulb_long[3]]
-        
-        def cross_frames(self):
-            return CrossSectionFrames(self.web_frame, self.transom, self.frame_fpp)
+    @property    
+    def cross_frames(self):
+        return CrossSectionFrames(web_frame=self.web_frame, transom=self.transom, fpp_frame=self.frame_fpp)
 
-        def longitudinals(self):
-            return Longitudinals(self.longitudinal_center)
-block = Block()
-cp = CtrlPts(block)
-cross_frames = CrossSectionFrames(cp.web_frame, cp.transom, cp.frame_fpp)
-longitudinals = Longitudinals(cp.longitudinal_center)
-waterlines = Waterlines(cp.waterplane, cp.main_deck)
+    @property
+    def longitudinals(self):
+        return Longitudinals(self.longitudinal_center)
+
+    @property
+    def waterlines(self):
+        return Waterlines(self.waterplane, self.main_deck)
+
+if __name__ == '__main__':
+
+    block = Block()
+    cp = CtrlPts(block)
+    print(cp.cross_frames())
+    # cross_frames = CrossSectionFrames(cp.web_frame, cp.transom, cp.frame_fpp)
+    # longitudinals = Longitudinals(cp.longitudinal_center)
+    # waterlines = Waterlines(cp.waterplane, cp.main_deck)
 

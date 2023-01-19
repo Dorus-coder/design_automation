@@ -12,6 +12,8 @@ def modify_control_points(ctrlpts : list, xyz : int, value : float):
         ctrlpts (list): control points to be modified.
         xyz (int): x = 0, y = 1, z = 2
         value (float): value to insert in the x, y or z of the control points
+    Return:
+        new_ctrlpts (list): copy of ctrlpts but modified with value in axis x, y, or z.
     """
     new_ctrlpts = deepcopy(ctrlpts)
     for _, v in enumerate(new_ctrlpts):

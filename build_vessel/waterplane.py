@@ -1,9 +1,6 @@
 import numpy as np
 import logging
-from dataclasses import dataclass
-from parameters import Block, waterlines, block
-from geomdl import BSpline
-from geomdl import utilities
+from geomdl import BSpline, utilities
 from scipy.integrate import simpson
 
 logging.basicConfig(filename='vessel_env.log', level=logging.INFO, format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
@@ -20,12 +17,10 @@ class WaterPlane:
 		x, y = self.water_plane_points[:,0], self.water_plane_points[:,1]
 		return simpson(y, x)
 
-	@property
-	def c_wp(self) -> float:
-		lb = block.lwl * block.boa
+	def c_wp(self, lwl, boa) -> float:
+		lb = lwl * boa
 		return self.area / lb
 		
-
 	@property
 	def ctrlpts(self) -> list:
 		return self.water_plane_ctrl_points
@@ -70,6 +65,7 @@ class WaterPlane:
 		return np.vstack((self.aft, self.forward))
 
 if __name__ == '__main__':
+	from parameters import Block, waterlines, block
 	from pyvista import KochanekSpline, PolyData, Spline, Plotter, Line, CircularArc, MultipleLines
 
 	pl = Plotter()

@@ -12,7 +12,7 @@ Sources:
     https://stable-baselines3.readthedocs.io/en/master/guide/install.html
     https://gymnasium.farama.org/tutorials/environment_creation/
 """
-
+from build_vessel.parameters import Block, CtrlPts
 import gym
 import numpy as np
 from gym import spaces
@@ -42,14 +42,13 @@ class CustomEnv(gym.Env):
             Observation: A numpy array with the input of the parametric model.
 
         """
-        from build_vessel.parameters import Block, CtrlPts
         # The observation of the enviroment consist the 
 
         # this function should check if the offset parameters are not bigger than the length in x direction of the B-spline.
         # and also for the transom
         self.md.action = action
         self.md.maindim()
-        block = Block(laft=self.md.laft, 
+        self.block = Block(laft=self.md.laft, 
                       lhold=self.md.lhold,
                       lfore=self.md.lfore,
                       boa=self.md.boa,
@@ -59,7 +58,7 @@ class CustomEnv(gym.Env):
                       transom_width=action['transom'][0],
                       transom_height=action['transom'][1],
                     )
-        ctrlpts = CtrlPts(block)
+        cp = CtrlPts(block)
         return observation, reward, done, info
 
     def reset(self):
@@ -80,5 +79,16 @@ class CustomEnv(gym.Env):
     def close(self):
         ...
 
-    def make_frames(self):
-        from build_vessel.parameters import C
+    def make_frames(self, ctrlpts: CtrlPts):
+        from build_vessel.cross_section import CrossSection
+        from build_vessel.waterplane import WaterPlane
+        from build_vessel.helpers import modify_control_points
+        transom = CrossSection(ctrlpts.cross_frames.transom)
+        wbfrm = CrossSection(ctrlpts.cross_frames.web_frame)
+        fpp = CrossSection(ctrlpts.cross_frames.fpp_frame)
+        # control points at the aft of the hold based on the web frame
+        hold_aft_ctrlpts = modify_control_points(ctrlpts.web_frame, 0 , self.block.laft)
+        hold_aft = CrossSection(hold_aft_ctrlpts)
+
+        wp = WaterPlane(ctrlpts.waterlines.waterplane)
+

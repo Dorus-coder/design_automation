@@ -6,7 +6,7 @@ import numpy as np
 from pyvista import KochanekSpline, PolyData, Plotter
 from dataclasses import dataclass
 from properties import Properties
-from helpers import modify_control_points, lin_interpolate, new_cross_fore
+from utils import modify_control_points, lin_interpolate, new_cross_fore
 
 
 @dataclass
@@ -70,65 +70,56 @@ def main():
     pl = Plotter()
     c, t, b = (-0.2, 1, 0)
 
-    HEIGHT = block.draft
-    
-    # aft
-    class 
-    aft_area = Properties(HEIGHT, block.laft)
-    for x in np.arange(0, block.laft):
-        _ctrpts = lin_interpolate((cp.cross_frames.transom, ms_control_points), x, HEIGHT)
-        frame = CrossSection(_ctrpts)
+
+    class BuildFrames:
+        def __init__(self, waterplane: WaterPlane, aftrange: int, forwardrange: int, height: float) -> None:
+            self.wp = waterplane
+            self.aftrange = aftrange
+            self.forwardrange = forwardrange
+
+            self.height = height
+            self._point_arrays = []
+
+            self.n_evalpts = 100
+            self.pl = Plotter()
+
+        def aft(self, laft):
+            points_array = np.empty([laft, self.n_evalpts, 3])
+            for x in np.arange(0, laft):
+                _ctrpts = lin_interpolate((cp.cross_frames.transom, ms_control_points), x, self.height)
+                frame = CrossSection(_ctrpts)
+                
+                points = frame.points()
+                points_array[x] = points
+
+                spline = KochanekSpline(points, tension=[t, t, t], continuity=[c, c, c], n_points=1000)
+                self.pl.add_mesh(spline, color="r")
+                self.pl.add_mesh(PolyData(frame.points()), color="r", point_size=1, render_points_as_spheres=True)
+            return points_array
+
+        def midship(self, hold_aft_points: np.ndarray, hold_fore_points: np.ndarray, lmid: int = 2):
+            mid = Properties(block.draft, lmid)
+            mid.memory = hold_aft_points, 0
+            mid.memory = hold_fore_points, 1
+            return mid.memory
+
+        def forward(self, hold_fore_points):
+            points_array = np.empty([len(wp.forward), self.n_evalpts, 3])
+            for x in range(len(wp.forward)):
+                points = new_cross_fore(wp.forward, np.array(hold_fore_points), x)
+                spline = KochanekSpline(points, tension=[t, t, t], continuity=[c, c, c], n_points=1000)
+                pl.add_mesh(spline, color="r")
+                pl.add_mesh(PolyData(points), color="r", point_size=1, render_points_as_spheres=True)
+                points_array[x] = points
+            return points_array
+
+        @property
+        def point_arrays(self):
+            return self._point_arrays
         
-        p = frame.points()
-        aft_area.memory = (p, x)
-
-        spline = KochanekSpline(p, tension=[t, t, t], continuity=[c, c, c], n_points=1000)
-        pl.add_mesh(spline, color="r")
-        pl.add_mesh(PolyData(frame.points()), color="r", point_size=1, render_points_as_spheres=True)
-
-    aft_area.area()
-    print(f"the area of the web frame {aft_area.section_area[-1]}")
-    print(f"the area of the transom frame {transom.area:.2f}")
-    print(f"The volume according to my function is {aft_area.volume():.2f}")
-    print(f"The volume according to scipy is {aft_area.volume_scipy():.2f}")
-    print(f"The statical moment of {aft_area.statical_moment() =}")
-    print(f"the {aft_area.total_area() =}")
-    print(f"lcb {aft_area.lcb() =:.2f}")
-    print()
-
-    # points of the forward waterplane
-    wp_fore = wp.forward
-    
-    # midship section fore
-    ms_control_points_2 = modify_control_points(wbfrm_points, 0, (block.laft + block.lhold))
-
-    # ms_control_points_2[-1][-1] = block.depth
-    ms_2 = CrossSection(ms_control_points_2)
-    ms_2_points = np.array(ms_2.points())
-    forward_area = Properties(block.depth, len(wp_fore))
-
-    for x in range(len(wp_fore)):
-        points = new_cross_fore(wp_fore, ms_2_points, x)
-        spline = KochanekSpline(points, tension=[t, t, t], continuity=[c, c, c], n_points=1000)
-        pl.add_mesh(spline, color="r")
-        pl.add_mesh(PolyData(points), color="r", point_size=1, render_points_as_spheres=True)
-        forward_area.memory = (points, x)
-
-    forward_area.area()
-    print(f"The volume of the forepeak according to my function is {forward_area.volume()}")
-    print(f"The volume of the forepeak according to scipy is {forward_area.volume_scipy()}")
-    print(f"the {forward_area.statical_moment() =:.2f}")
-    print(f"the {forward_area.lcb() =:.2f}")
-    print()
-
-    # Midship
-    mid = Properties(block.draft, 2)
-    mid.memory = ms_1_points, 0
-    mid.memory = ms_2_points, 1
-    mid.area()
-    print(f"the {mid.volume_scipy() =:.2f}")
-    print(f"the {mid.statical_moment() =:.2f}")
-    print(f"the {mid.lcb() = :.2f}")
+        @point_arrays.setter
+        def point_arrays(self, hold_aft_points, hold_fore_points):
+            self._point_arrays = np.concatenate((self.aft(), self.midship(hold_aft_points, hold_fore_points), self.forward(hold_fore_points)), axis=0)
 
     # Total area
     arrays = np.concatenate((aft_area.memory, mid.memory, forward_area.memory), axis=0)

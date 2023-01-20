@@ -8,6 +8,8 @@ from geomdl import BSpline
 from geomdl import utilities
 from parameters import CrossSectionFrames
 from scipy.integrate import simpson
+from properties import Properties
+from utils import lin_interpolate, new_cross_fore
 
 
 class CrossSection():
@@ -66,6 +68,57 @@ def midship_coefficient(l, b, r):
     small_sqr = r ** 2
     left_over = small_sqr - area_circle / 4
     return (l * b - left_over) / (l * b)
+
+
+class BuildFrames:
+    def __init__(self, waterplane, aftrange: int, forwardrange: int, height: float) -> None:
+        self.wp = waterplane
+        self.aftrange = aftrange
+        self.forwardrange = forwardrange
+
+        self.height = height
+        self._point_arrays = []
+
+        self.n_evalpts = 100
+        self.pl = Plotter()
+
+    def aft(self, laft):
+        points_array = np.empty([laft, self.n_evalpts, 3])
+        for x in np.arange(0, laft):
+            _ctrpts = lin_interpolate((cp.cross_frames.transom, ms_control_points), x, self.height)
+            frame = CrossSection(_ctrpts)
+            
+            points = frame.points()
+            points_array[x] = points
+
+            spline = KochanekSpline(points, tension=[t, t, t], continuity=[c, c, c], n_points=1000)
+            self.pl.add_mesh(spline, color="r")
+            self.pl.add_mesh(PolyData(frame.points()), color="r", point_size=1, render_points_as_spheres=True)
+        return points_array
+
+    def midship(self, hold_aft_points: np.ndarray, hold_fore_points: np.ndarray, lmid: int = 2):
+        mid = Properties(self.height, lmid)
+        mid.memory = hold_aft_points, 0
+        mid.memory = hold_fore_points, 1
+        return mid.memory
+
+    def forward(self, hold_fore_points):
+        points_array = np.empty([len(wp.forward), self.n_evalpts, 3])
+        for x in range(len(wp.forward)):
+            points = new_cross_fore(wp.forward, np.array(hold_fore_points), x)
+            spline = KochanekSpline(points, tension=[t, t, t], continuity=[c, c, c], n_points=1000)
+            pl.add_mesh(spline, color="r")
+            pl.add_mesh(PolyData(points), color="r", point_size=1, render_points_as_spheres=True)
+            points_array[x] = points
+        return points_array
+
+    @property
+    def point_arrays(self):
+        return self._point_arrays
+    
+    @point_arrays.setter
+    def point_arrays(self, hold_aft_points, hold_fore_points):
+        self._point_arrays = np.concatenate((self.aft(), self.midship(hold_aft_points, hold_fore_points), self.forward(hold_fore_points)), axis=0)
 
 if __name__ == '__main__':
     from pyvista import KochanekSpline, PolyData, Spline, Plotter, Line, CircularArc, MultipleLines

@@ -6,6 +6,8 @@ Author: Dorus Boogaard
 from copy import deepcopy
 import numpy as np
 
+
+
 def modify_control_points(ctrlpts : list, xyz : int, value : float):
     """ modifies the x, y or z value of the control points.\n
     Arg:

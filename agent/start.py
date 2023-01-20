@@ -58,7 +58,7 @@ class CustomEnv(gym.Env):
                       transom_width=action['transom'][0],
                       transom_height=action['transom'][1],
                     )
-        cp = CtrlPts(block)
+        cp = CtrlPts(self.block)
         return observation, reward, done, info
 
     def reset(self):
@@ -82,13 +82,16 @@ class CustomEnv(gym.Env):
     def make_frames(self, ctrlpts: CtrlPts):
         from build_vessel.cross_section import CrossSection
         from build_vessel.waterplane import WaterPlane
-        from build_vessel.helpers import modify_control_points
+        from build_vessel.utils import modify_control_points
+
         transom = CrossSection(ctrlpts.cross_frames.transom)
         wbfrm = CrossSection(ctrlpts.cross_frames.web_frame)
         fpp = CrossSection(ctrlpts.cross_frames.fpp_frame)
+        
         # control points at the aft of the hold based on the web frame
         hold_aft_ctrlpts = modify_control_points(ctrlpts.web_frame, 0 , self.block.laft)
         hold_aft = CrossSection(hold_aft_ctrlpts)
-
+        hold_fore_ctrlpts = modify_control_points(ctrlpts.web_frame, 0, (self.block.laft + self.block.lhold))
+        hold_fore = CrossSection(hold_fore_ctrlpts)
         wp = WaterPlane(ctrlpts.waterlines.waterplane)
 

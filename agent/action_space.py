@@ -15,22 +15,20 @@ from gymnasium.spaces import Dict, Discrete, Tuple, MultiDiscrete
 
 action_space = Dict(
         {
-        'bale_dim': Tuple((Discrete(250, start=1),Discrete(6, start=4), Discrete(9, start=3), Discrete(9, start=3))),
+        'bale_dim': Tuple((Discrete(250, start=1), Discrete(6, start=4), Discrete(9, start=3), Discrete(9, start=3))),
         'transom': MultiDiscrete([20, 20]),
         'bilge_radius': Discrete(4),
         'ctrlpts_offset': MultiDiscrete([50])
     }        
 )
 
-
-
-
+example = {
+    'bale_dim': (50, 5, 5, 5),
+    'transom': [10, 10],
+    'bilge_radius': 2,
+    'ctrlpts_offset': [10]
+}
 
 action_space2 = Dict({'bale_dim': MultiDiscrete([7, 5])})
 
-r = Discrete(6, start=4)
-r.seed(4)
-# print(action_space.sample())
-# print(action_space.sample()['transom'][0])
-for _ in range(20):
-    print(r.sample())
+# print(type(action_space.sample()['bale_dim'][1]))

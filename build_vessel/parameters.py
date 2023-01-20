@@ -66,16 +66,16 @@ class MainDimGenerator:
 
     def maindim(self):
         self.lhold = self.action['bale_dim'][0]
-        self.boa = self.lhold / self.action[1]
-        self.depth_hold = self.bale / (self.l_hold * self.boa) 
+        self.boa = self.lhold / self.action['bale_dim'][1]
+        self.depth_hold = self.bale / (self.lhold * self.boa) 
 
     @property
     def laft(self):
-        return round(self.lhold / self.action[2])
+        return round(self.lhold / self.action['bale_dim'][2])
 
     @property
     def lfore(self):
-        return round(self.x / self.action[3])
+        return round(self.lhold / self.action['bale_dim'][3])
 
     @property
     def loa(self):
@@ -95,7 +95,7 @@ class Block:
     ctrlpt_offset_forward: int = 7 # Cannot become bigger than the length fore, because otherwise strange shapes emerge 
     # transom
     transom_width: int = 14 # reduction in breadth at the transom from the main deck
-    height_transom: int = 8.5
+    transom_height: int = 8.5
     transom_offset:int = 0
     # default values
     lwl = laft + lhold + laft
@@ -155,8 +155,8 @@ class CtrlPts:
                     [block.lwl - block.ctrlpt_offset_forward, block.boa, block.draft],
                     [block.lwl, 0, block.draft]]
 
-        self.transom = [[0, 0, block.height_transom],
-                [0, block.transom_width, block.height_transom - block.transom_offset],
+        self.transom = [[0, 0, block.transom_height],
+                [0, block.transom_width, block.transom_height - block.transom_offset],
                 [0, block.transom_width, block.depth]]
 
             # This is a special list with three sublists containing the first order lines aft, the bspline control points of the bulb and the first order lines fore
@@ -169,7 +169,7 @@ class CtrlPts:
                     [block.loa, 0, block.depth]]
 
         self.longitudinal_center = [[[0, 0, block.depth],
-                                [0, 0, block.height_transom],
+                                [0, 0, block.transom_height],
                                 [block.laft, 0, 0],
                                 [block.lwl, 0, 0]],
                                 bulb_long,

@@ -73,7 +73,6 @@ def main():
     HEIGHT = block.draft
     
     # aft
-    class 
     aft_area = Properties(HEIGHT, block.laft)
     for x in np.arange(0, block.laft):
         _ctrpts = lin_interpolate((cp.cross_frames.transom, ms_control_points), x, HEIGHT)

@@ -17,7 +17,7 @@ import gym
 import numpy as np
 from gym import spaces
 from build_vessel.cross_section import CrossSection, BuildFrames
-from build_vessel.properties import Properties
+from build_vessel.properties import Properties, Info
 from build_vessel.utils import modify_control_points, HMInput
 
 BALE = 8000
@@ -31,6 +31,7 @@ class CustomEnv(gym.Env):
 
     def __init__(self):
         super().__init__()
+        self.hm_resistance = []
         # Define action and observation space
         # They must be gym.spaces objects
         # Example when using discrete actions:
@@ -64,7 +65,18 @@ class CustomEnv(gym.Env):
                       transom_height=action['transom'][1],
                     )
         cp = CtrlPts(self.block)
-        return cp #observation, reward, done, info
+        done = cp.check_ctrlpts(action)
+        
+        info, observation = self.observe_resistance(cp)
+        info.laft = self.block.laft
+        info.lhold = self.block.lhold
+        info.lfore = self.block.lfore
+        info.lwl = sum((info.laft, info.lhold, info.lfore))
+        info.half_boa = self.block.boa
+        info.draft = self.block.draft
+        
+        reward = self.reward_function()
+        return observation, reward, done, info #observation, reward, done, info
 
     def reset(self):
         """
@@ -77,13 +89,18 @@ class CustomEnv(gym.Env):
         """
         This function initialize the parametric model.
         Therefore it should set the parameters
+        Maybe render should be the visulization of the ship. Resetting the parameters of the ship every iteration of
+        the episode might not be a good thing. 
+        
         """
         from build_vessel.parameters import MainDimGenerator
         self.md = MainDimGenerator(bale=BALE)
 
     def close(self):
-        ...
-
+        """
+        This function should close the visualization of the ship.
+        """
+        return
     def main_frames(self, ctrlpts: CtrlPts):
         from build_vessel.waterplane import WaterPlane
         
@@ -102,17 +119,17 @@ class CustomEnv(gym.Env):
 
     def frames(self, ctrlpts: CtrlPts):
         transom, fpp, hold_aft, hold_fore_ctrlpts, hold_fore = self.main_frames(ctrlpts)
-        bf = BuildFrames(self.wp, self.block.laft, self.block.draft)
-        aft = bf.aft(self.block.laft ,self.hold_aft_ctrlpts, ctrlpts.transom)
-        mid = bf.midship(hold_aft.points, hold_fore.points)
-        fore = bf.forward(hold_fore.points)
-        bf.visualize()
+        self.bf = BuildFrames(self.wp, self.block.laft, self.block.draft)
+        aft = self.bf.aft(self.block.laft ,self.hold_aft_ctrlpts, ctrlpts.transom)
+        mid = self.bf.midship(hold_aft.points, hold_fore.points)
+        fore =self.bf.forward(hold_fore.points)
         return np.concatenate((aft, mid, fore), axis=0)
 
     def observe_resistance(self, ctrlpts: CtrlPts):
         from HoltropMennen import HoltropMennen
         points = self.frames(ctrlpts)
-        prop = Properties(self.block.draft, len(points))
+        info = Info()
+        prop = Properties(self.block.draft, len(points), info)
         prop.memory = points, True
         prop.area()
         hm_input = HMInput(lpp= self.block.lwl,
@@ -130,17 +147,43 @@ class CustomEnv(gym.Env):
                     velocity=VELOCITY,                
                     )
         hm_res = HoltropMennen(hm_input)
-        return hm_res.total_resistance()
+        hm_total_res = hm_res.total_resistance()
+        self.hm_resistance.append(hm_total_res)
+        return info, hm_total_res
+
+    def reward_function(self):
+        if len(self.hm_resistance) > 1:
+            if self.hm_resistance[-1] < np.min(self.hm_resistance[:-1]):
+                return 1
+            else:
+                return -1
+        else:
+            return 0
 
 
 if __name__ == "__main__":
     from action_space import action_space, example
     env = CustomEnv()
-    env.render()
-    # env.reset()
-    sam = action_space.sample()
-    cp = env.step(sam)
-    print(f"{sam = }")
-    obs = env.observe_resistance(cp)
-    print(obs)
-    # env.close()
+    episodes = 10
+    for episode in range(1, episodes+1):
+        done = False
+        score = 0
+        while not done:
+            env.render()
+            # env.reset()
+            sam = action_space.sample()
+            observation, reward, done, info = env.step(sam)
+            
+            score += reward
+            print(f"{reward = }")
+            print(f"{sam = }")
+        
+            info.print_info()
+            print(observation)
+            print(f"end of iteration {done}")
+            # env.bf.visualize()
+            # env.bf.close_visualisation()
+            
+        print("\n \n \n")
+        print(f"Episode: {episode} Score: {score}")
+            # env.close()

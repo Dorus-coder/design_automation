@@ -7,7 +7,7 @@ import numpy as np
 from geomdl import BSpline
 from geomdl import utilities
 from scipy.integrate import simpson
-from build_vessel.properties import Properties
+from build_vessel.properties import Properties, Info
 from build_vessel.utils import lin_interpolate, new_cross_fore
 from pyvista import KochanekSpline, PolyData, Plotter
 
@@ -71,14 +71,22 @@ def midship_coefficient(l, b, r):
 
 
 class BuildFrames:
-    def __init__(self, waterplane, aftrange: int, height: float) -> None:
-        self.wp = waterplane
-        self.wp.water_plane_points
-        self.aftrange = aftrange
-        self.height = height
+    def __init__(self, waterplane, aftrange: int, height: float, plotter) -> None:
+        self._wp = waterplane
+        self._wp.water_plane_points
+        self._aftrange = aftrange
+        self._height = height
         self.n_evalpts = 100
         
-        self.pl = Plotter()
+        self.pl = plotter
+
+    @property
+    def wp(self):
+        return self._wp
+    
+    @wp.setter
+    def wp(self, wp):
+        self._wp = wp
 
     def aft(self, laft: int, hold_aft_ctrlpts: list, cross_frames_transom):
         points_array = np.empty([laft, self.n_evalpts, 3])
@@ -95,7 +103,8 @@ class BuildFrames:
         return points_array
 
     def midship(self, hold_aft_points, hold_fore_points, lmid: int = 2):
-        mid = Properties(self.height, lmid)
+        info = Info()
+        mid = Properties(self.height, lmid, info)
         mid.memory = np.array(hold_aft_points), 0
         mid.memory = np.array(hold_fore_points), 1
         return mid.memory
@@ -114,6 +123,9 @@ class BuildFrames:
     def visualize(self):
         self.pl.show_bounds(location='outer', font_size=20, use_2d=True)
         self.pl.show()
+
+    def close_visualisation(self):
+        self.pl.close()
 
 
 if __name__ == '__main__':

@@ -5,29 +5,6 @@ Author: Dorus Boogaard
 """
 from copy import deepcopy
 import numpy as np
-from dataclasses import dataclass
-
-@dataclass
-class HMInput:
-    lpp: float
-    B: float
-    t_f: float # draft fore
-    t_a: float # draft aft
-    displ: float
-    lcb: float # Longitudinal center of bouyancy in percentage forward of 1/2 lpp
-    c_m: float # midship section coefficient 
-    c_wp: float # waterplane area coefficient
-    a_t: float # transom area
-    c_prism: float # prismatic coefficient 
-    c_b: float
-    ie: float # half angle of entrance 
-    velocity: float
-    c_stern: int = 0 # stern shape parameter
-    # bulb optional
-    h_b: float = 0.0001 # centre of bulb area above keel [m]
-    a_bt: float = 0.001 # transverse bulb area [m^2]
-    h_b: float = 0.0001 # centre of bulb area above keel [m]
-    a_bt: float = 0.0001 # transverse bulb area [m^2]
 
 
 def modify_control_points(ctrlpts : list, xyz : int, value : float):

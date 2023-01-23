@@ -2,34 +2,9 @@ import numpy as np
 import math
 from dataclasses import dataclass
 
-@dataclass
-class ShipCharasteristics:
-    loa = 205.0
-    lpp = 200
-    B  = 32
-    t_f = 10
-    t_a = 10
-    displ = 37_500
-    lcb = -0.75#-2.02
-    a_bt = 20 # transverse bulb area [m^2]
-    h_b = 4 # centre of bulb area above keel [m]
-    c_m = 0.98 # midship section coefficient 
-    c_wp = 0.75 # waterplane area coefficient
-    a_t = 16 # transom area 
-    s_app = 50 # wetted area appendages
-    c_stern = 10 # stern shape parameter
-    c_prism = 0.5833  #0.5477 # prismatic coefficient 
-    c_b = 0.612
-    ie = 12.08 # half angle of entrance 
-    # propellor 
-    d_prop = 8 # propellor diameter [m]
-    z = 4 # number of blades 
-    clear_prop = 0.2 # clearance propellor with keel line
-    velocity = 25 # [knots]
-
 
 class HoltropMennen:
-    def __init__(self, ship: ShipCharasteristics): 
+    def __init__(self, ship): 
         self.ship = ship
         self.mean_draft = (self.ship.t_a + self.ship.t_f) / 2
         self._lwl = self.ship.lpp 
@@ -42,6 +17,8 @@ class HoltropMennen:
     def total_resistance(self):
         """test case 1793
         """
+        print(sum((self.friction_res() * self.form_factor(), self.wave_res(), self.bulb_res(), self.ra(), self.rtr())))
+        print(self.ship.lpp, self.ship.B, self.mean_draft)
         return sum((self.friction_res() * self.form_factor(), self.wave_res(), self.bulb_res(), self.ra(), self.rtr()))
 
     def friction_res(self):
@@ -279,7 +256,58 @@ class HoltropMennen:
         return (5.68 - 0.6 * np.log10(self.rn)) * 10 ** -4
 
 if __name__ == "__main__":
-    ship = ShipCharasteristics()
+    """
+    'lwl': 238.2129506069145,
+    'half_boa': 14.558537792153748, 
+    'draft': 2.175426692225379, 
+    'transom_area': 15.841487700288218, 
+    'volume': 5257.9657849824325, 
+    'statical_moment': 467968.96640225995, 
+    'lcb': 89.00190407074388, 
+    'prismatic_coefficient': 0.7010511243964301, 
+    'block_coefficient': 0.6969316312735822, 
+    'ie': 9.718595512761645, 'error': {}}
+    """
+    @dataclass
+    class ShipCharasteristics:
+        loa: float = 205.0
+        lpp: float  = 200
+        B: float   = 32
+        t_f: float  = 10
+        t_a: float  = 10
+        displ: float  = 37_500
+        lcb: float  = -0.75#-2.02
+        a_bt: float  = 20 # transverse bulb area [m^2]
+        h_b: float  = 4 # centre of bulb area above keel [m]
+        c_m: float  = 0.98 # midship section coefficient 
+        c_wp: float  = 0.75 # waterplane area coefficient
+        a_t: float  = 16 # transom area 
+        s_app: float  = 50 # wetted area appendages
+        c_stern: float  = 10 # stern shape parameter
+        c_prism: float  = 0.5833  #0.5477 # prismatic coefficient 
+        c_b: float  = 0.612
+        ie: float  = 12.08 # half angle of entrance 
+        # propellor 
+        velocity: int = 25 # [knots]
+
+    ship = ShipCharasteristics(loa=108.46781608872128,
+                               lpp=108.46781608872128,
+                               B=21.368106940490463 * 2,
+                               t_f=11.151339805043357,
+                               t_a=11.151339805043357,
+                               displ=17917.549960885655,
+                               lcb=99.62232804653188,
+                               a_bt=0.0001,
+                               h_b=0.00001,
+                               c_m=0.9,
+                               c_wp=0.9,
+                               a_t=49.008861773157705,
+                               s_app=0,
+                               c_stern=0,
+                               c_prism=0.9,
+                               c_b=0.6763332896033876,
+                               ie=42.9297323168994,
+                               velocity=12)
     hm = HoltropMennen(ship)
     # print(f"{hm.friction_res() = }")
     # print(f"{hm.form_factor() = }")

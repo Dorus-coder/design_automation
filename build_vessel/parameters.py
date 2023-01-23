@@ -1,11 +1,9 @@
-
-
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from build_vessel.freeboard import min_freeboard
 import pandas as pd
 import numpy as np
-from enum import Enum 
-df = pd.read_csv(r"build_vessel\\Rules\\min_freeboard.csv")
-
+from enum import Enum
+import copy
 
 class Direction(Enum):
     """
@@ -65,45 +63,140 @@ class MainDimGenerator:
             return
 
     def maindim(self):
-        self.lhold = self.action['bale_dim'][0]
-        self.boa = self.lhold / self.action['bale_dim'][1]
-        self.depth_hold = self.bale / (self.lhold * self.boa) 
 
+        self.lhold = self.action[0] * 100 + 25
+        self.boa = self.lhold / (self.action[1] * 2 + 5)
+        self.depth_hold = self.bale / (self.lhold * self.boa) 
+        
     @property
     def laft(self):
-        return round(self.lhold / self.action['bale_dim'][2])
-
+        return int(np.ceil(self.lhold * self.action[2]))
+        
     @property
     def lfore(self):
-        return round(self.lhold / self.action['bale_dim'][3])
+        return int(np.ceil(self.lhold * self.action[3]))
 
-    @property
-    def loa(self):
-        return np.sum((self.lfore, self.x, self.laft))
 
 @dataclass
 class Block:
     """Parameters describing the block of the hull shape.
     """
-    laft: int = 25
-    lhold: float = 145.0
-    lfore: int = 30
-    boa: float = 16.0
+    laft: int
+    lhold: float
+    lfore: int
+    boa: float
+    lwl: float = field(init=False)
+    loa: float = field(init=False)
     # draft should be the height of the hold minus the minimum freeboard
-    depth: float = 13
-    bilge_radius: int = 2
-    ctrlpt_offset_forward: int = 7 # Cannot become bigger than the length fore, because otherwise strange shapes emerge 
+    depth: float
+    draft: float = field(init=False)
+    bilge_radius: int
+    ctrlpt_offset_forward: int # Cannot become bigger than the length fore, because otherwise strange shapes emerge 
     # transom
-    transom_width: int = 14 # reduction in breadth at the transom from the main deck
-    transom_height: int = 8.5
+    transom_width: float# reduction in breadth at the transom from the main deck
+    transom_height_action: float
     transom_offset:int = 0
     # default values
-    lwl = laft + lhold + laft
-    loa = lwl
-    draft = depth - np.ceil(df.loc[df["length"] == loa].values[0][1] / 1000) # "A" type ship
+
+    def __post_init__(self):
+        self.lwl = sum((self.laft, self.lhold, self.lfore))
+        self.loa = self.lwl
+        self.draft = self.depth - min_freeboard(self.loa)
+        self.transom_height = self.transom_height_action * self.draft
     
+    def check_done(self, action):
+        """Check if the actions are valid. If not, return True.\n
+        The action space has to be made more maintable.
+        """
+        # check if transom width is bigger than the breadth
+        if action[4] * self.boa > self.boa:
+            return True
+        # check if the transom height is bigger than the draft
+        elif action[5] * self.draft > self.draft:
+            return True
+        # check if the control point offset is bigger than the length fore
+        elif action[7] * self.lfore > self.lfore:
+            return True
+        # check if the draft is below zero.
+        elif self.draft < 0:
+            self.draft = 20 # in the case of a small draft, the other parameters are likely big and by increasing the draft unrealistically it cause an really big resistance.
+            return True
+        else:
+            return False
 
-
+@dataclass
+class HMInput:
+    lpp: float
+    B: float
+    t_f: float # draft fore
+    t_a: float # draft aft
+    displ: float
+    lcb: float # Longitudinal center of bouyancy in percentage forward of 1/2 lpp
+    c_m: float # midship section coefficient 
+    c_wp: float # waterplane area coefficient
+    a_t: float # transom area
+    c_prism: float # prismatic coefficient 
+    c_b: float
+    ie: float # half angle of entrance 
+    velocity: float
+    c_stern: int = 0 # stern shape parameter
+    # bulb optional
+    h_b: float = 0.0001 # centre of bulb area above keel [m]
+    a_bt: float = 0.001 # transverse bulb area [m^2]
+    h_b: float = 0.0001 # centre of bulb area above keel [m]
+    a_bt: float = 0.0001 # transverse bulb area [m^2]
+    reward_correct_input: int = 0
+    def __post_init__(self):
+        if self.t_f < 0:
+            self.t_a = 50
+            self.t_f = 50
+            self.reward_correct_input -= -1
+        else:
+            self.reward_correct_input += 1
+            #raise ValueError("Field 't_a' cannot be negative.")
+        if self.a_t < 0:
+            self.a_t = 50
+            self.reward_correct_input -= -1
+        else:
+            self.reward_correct_input += 1
+            #raise ValueError("Field 'a_t' cannot be negative.")
+        if self.displ < 0:
+            self.displ = 1000000
+            self.reward_correct_input -= -1
+        else:
+            self.reward_correct_input += 1
+            #raise ValueError("Field 'displ' cannot be negative.")
+        if not 0 > self.c_m > 1:
+            self.c_m = 0.9
+            self.reward_correct_input -= -1
+        else:
+            self.reward_correct_input += 1
+            # raise ValueError("Field 'c_m' cannot be negative.")
+        if not 0 > self.c_wp > 1:
+            self.c_wp = 0.9
+            self.reward_correct_input -= -1
+        else:
+            self.reward_correct_input += 1
+            # raise ValueError("coefficients should be between 0 and 1")
+        if not 0 > self.c_prism > 1:
+            self.c_prism = 0.9
+            self.reward_correct_input -= -1
+        else:
+            self.reward_correct_input += 1
+            # raise ValueError("Field 'c_prism' cannot be negative.")
+        if not 0 > self.c_b > 1:
+            self.reward_correct_input -= -1
+            self.c_b = 0.9
+        else:
+            self.reward_correct_input += 1
+            # raise ValueError("Field 'c_b' cannot be negative.")
+        if self.lcb < 0:
+            self.lcb = 0
+            self.reward_correct_input -= -1
+        else:
+            self.reward_correct_input += 1
+            # raise ValueError("Field 'lcb' cannot be negative.")
+            
 
 # @dataclass  
 # class Bulb:
@@ -192,24 +285,8 @@ class CtrlPts:
     def waterlines(self):
         return Waterlines(self.waterplane, self.main_deck)
 
-    def check_ctrlpts(self, action):
-        """Check if the actions are valid. If not, return True.
-        """
-        if action['transom'][0] > self.block.boa:
-            return True
-        elif action['transom'][1] > self.block.draft:
-            return True
-        elif action['ctrlpts_offset'][0] > self.block.lfore:
-            return True
-        else:
-            return False
 
 if __name__ == '__main__':
-
-    block = Block()
-    cp = CtrlPts(block)
-    print(cp.cross_frames())
-    # cross_frames = CrossSectionFrames(cp.web_frame, cp.transom, cp.frame_fpp)
-    # longitudinals = Longitudinals(cp.longitudinal_center)
-    # waterlines = Waterlines(cp.waterplane, cp.main_deck)
-
+    block = Block(laft=20, lhold=40, lfore=30, boa=20, depth=10, bilge_radius=2, ctrlpt_offset_forward=5, transom_width=5, transom_height=10)
+    print(block)
+    print(block.check_done([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]))

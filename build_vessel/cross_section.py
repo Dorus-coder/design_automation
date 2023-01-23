@@ -71,22 +71,14 @@ def midship_coefficient(l, b, r):
 
 
 class BuildFrames:
-    def __init__(self, waterplane, aftrange: int, height: float, plotter) -> None:
-        self._wp = waterplane
-        self._wp.water_plane_points
-        self._aftrange = aftrange
-        self._height = height
+    def __init__(self, waterplane, aftrange: int, height: float) -> None:
+        self.wp = waterplane
+        self.wp.water_plane_points
+        self.aftrange = aftrange
+        self.height = height
         self.n_evalpts = 100
         
-        self.pl = plotter
-
-    @property
-    def wp(self):
-        return self._wp
-    
-    @wp.setter
-    def wp(self, wp):
-        self._wp = wp
+        self.pl = Plotter()
 
     def aft(self, laft: int, hold_aft_ctrlpts: list, cross_frames_transom):
         points_array = np.empty([laft, self.n_evalpts, 3])

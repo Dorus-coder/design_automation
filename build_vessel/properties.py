@@ -86,6 +86,12 @@ class Properties:
         self.info.lcb = lcb
         return lcb
 
+    def lcb_ratio(self, lwl) -> float:
+        """lcb in percentage of half the lwl
+        """
+        lpp_2 = lwl / 2
+        return (self.lcb() - lpp_2) / lpp_2
+
     def total_area(self) -> float:
         return np.sum(self.section_area[:,1])
 
@@ -124,6 +130,9 @@ class Info:
         self.prismatic_coefficient = None
         self.block_coefficient = None
         self.ie = None
+        self.c_wp = None
+        self.c_m = None
+        self.error = {}
 
     def __str__(self) -> str:
         return f"{self.transom_area = :.2f} \n {self.volume = :.2f} \n {self.statical_moment = :.2f} \n {self.lcb = :.2f} \n {self.prismatic_coefficient = :.2f} \n {self.block_coefficient = :.2f} \n {self.ie = :.2f}"

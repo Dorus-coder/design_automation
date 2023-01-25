@@ -36,13 +36,16 @@ class ShipEnv(gym.Env):
         self.time_step = 0
         self.hm_resistance = np.array([np.inf])
 
-        self.action_space = Box(low=np.array([0, 0, 0, 0, 0, 0, 0, 0]), high=np.array(
+        self.action_space = Box(low=np.array([-1, -1, -1, -1, -1, -1, -1, -1]), high=np.array(
             [1, 1, 1, 1, 1, 1, 1, 1]), shape=(8,), dtype=np.float64)
         self.observation_space = Box(low=np.array(
             [0]), high=np.array([np.inf]), shape=(1,), dtype=np.float64)
 
         # self.action_space = Box(low=np.array([1, 4, 3, 3, 0, 0, 0, 0]), high=np.array([100, 6, 9, 9, 20, 20, 4, 25]), shape=(8,), dtype=np.float64)
         # self.observation_space = Box(low=np.array([0, 0, 0, 0, 0, 0, 0, 0]), high=np.array([1, 1, 1, 1, 1, 1, 1, 1]), shape=(8,), dtype=np.float64)
+    def rescale_actions(self, tanh_output, low, high):
+        range = high - low
+        return tanh_output * range / 2 + (low + (0.5 * range))
 
     def step(self, action):
         """
@@ -63,7 +66,11 @@ class ShipEnv(gym.Env):
         if np.nan in action:
             print(action)
             action = np.array([0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5])
-        md.action = action
+        lhold = self.rescale_actions(action[0], low=25, high=125)
+        boa = self.rescale_actions(action[1], low=2, high=7) # B/L relation
+        laft = self.rescale_actions(action[2], low=0, high=0.5) # percentage of lhold
+        lfore = self.rescale_actions(action[3], low=0, high=0.5) # percentage of lhold
+        md.action = [lhold, boa, laft, lfore]
         md.maindim()
  
         self.block = Block(laft=md.laft,
@@ -71,10 +78,10 @@ class ShipEnv(gym.Env):
                            lfore=md.lfore,
                            boa=md.boa,
                            depth=md.depth_hold,
-                           bilge_radius=action[6] * 4,
-                           ctrlpt_offset_forward=action[7] * md.lfore,
-                           transom_width=action[4] * md.boa,
-                           transom_height_action=action[5]*md.depth_hold,
+                           bilge_radius=self.rescale_actions(action[6], low=0, high=4),
+                           ctrlpt_offset_forward=self.rescale_actions(action[7], low=0, high=md.lfore),
+                           transom_width=self.rescale_actions(action[4], low=0, high=md.boa),
+                           transom_height_action=self.rescale_actions(action[5],low=0,high=1),
                            )
         cp = CtrlPts(self.block)
         done1 = self.block.check_done(action)
@@ -272,4 +279,4 @@ def main_2():
     env.bf.visualize()
 
 if __name__ == "__main__":
-    main_2()
+    main_1()

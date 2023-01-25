@@ -12,7 +12,7 @@ episode_length = 25
 env = ShipEnv()
 env = DummyVecEnv([lambda: TimeLimit(env=env, max_episode_steps=episode_length)]) # wrapping
 
-model = A2C('MlpPolicy', env, verbose = 2)
+model = A2C('MlpPolicy', env, verbose = 2, normalize_advantage=True)
 try:
     model.learn(total_timesteps=time_steps, log_interval=2 ,progress_bar=True)
 except ValueError:

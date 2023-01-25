@@ -64,8 +64,8 @@ class MainDimGenerator:
 
     def maindim(self):
 
-        self.lhold = self.action[0] * 100 + 25
-        self.boa = self.lhold / (self.action[1] * 2 + 5)
+        self.lhold = self.action[0]
+        self.boa = self.lhold / (self.action[1])
         self.depth_hold = self.bale / (self.lhold * self.boa) 
         
     @property
@@ -102,23 +102,14 @@ class Block:
         self.lwl = sum((self.laft, self.lhold, self.lfore))
         self.loa = self.lwl
         self.draft = self.depth - min_freeboard(self.loa)
-        self.transom_height = self.transom_height_action * self.draft
+        self.transom_height = abs(self.transom_height_action * self.draft) # This has to be improved because it could make the transom height broken.
     
     def check_done(self, action):
         """Check if the actions are valid. If not, return True.\n
         The action space has to be made more maintable.
         """
-        # check if transom width is bigger than the breadth
-        if action[4] * self.boa > self.boa:
-            return True
-        # check if the transom height is bigger than the draft
-        elif action[5] * self.draft > self.draft:
-            return True
-        # check if the control point offset is bigger than the length fore
-        elif action[7] * self.lfore > self.lfore:
-            return True
         # check if the draft is below zero.
-        elif self.draft < 0:
+        if self.draft < 0:
             self.draft = 20 # in the case of a small draft, the other parameters are likely big and by increasing the draft unrealistically it cause an really big resistance.
             return True
         else:

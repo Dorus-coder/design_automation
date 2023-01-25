@@ -1,4 +1,10 @@
 """
+Note:
+
+    The default policies for SAC differ a bit from others MlpPolicy: 
+    it uses ReLU instead of tanh activation, to match the original paper.
+
+
 MlpPolicy 	Policy object that implements actor critic, using a MLP (2 layers of 64)
 MlpLstmPolicy 	Policy object that implements actor critic, using LSTMs with a MLP feature extraction
 MlpLnLstmPolicy 	Policy object that implements actor critic, using a layer normalized LSTMs with a MLP feature extraction

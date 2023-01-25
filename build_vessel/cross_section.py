@@ -6,23 +6,24 @@ author: Dorus Boogaard
 import numpy as np
 from geomdl import BSpline
 from geomdl import utilities
-from parameters import CrossSectionFrames
 from scipy.integrate import simpson
-
+from build_vessel.properties import Properties, Info
+from build_vessel.utils import lin_interpolate, new_cross_fore
+from pyvista import KochanekSpline, PolyData, Plotter
 
 class CrossSection():
-    def __init__(self, ctrlpts : CrossSectionFrames) -> None:
+    def __init__(self, ctrlpts) -> None:
         self._degree = 2
         self._delta = 0.01
         self._ctrlpts = ctrlpts
 
     def cross_section_coefficient(self):
-        y, z = np.max(np.array(self.points())[:,1]), np.max(np.array(self.points())[:,2])
+        y, z = np.max(np.array(self.points)[:,1]), np.max(np.array(self.points)[:,2])
         return self.area / (y * z)
 
     @property
     def area(self) -> float:
-        points = np.array(self.points())
+        points = np.array(self.points)
         y, z = points[:,1], points[:,2] 
         return simpson(y, z)
 
@@ -58,6 +59,7 @@ class CrossSection():
         curve.delta = self.delta 
         return curve
 
+    @property
     def points(self):
         return self.b_spline().evalpts
 
@@ -66,6 +68,58 @@ def midship_coefficient(l, b, r):
     small_sqr = r ** 2
     left_over = small_sqr - area_circle / 4
     return (l * b - left_over) / (l * b)
+
+
+class BuildFrames:
+    def __init__(self, waterplane, aftrange: int, height: float) -> None:
+        self.wp = waterplane
+        self.wp.water_plane_points
+        self.aftrange = aftrange
+        self.height = height
+        self.n_evalpts = 100
+        
+        self.pl = Plotter()
+        self.pl.set_background("royalblue", top="aliceblue")
+
+    def aft(self, laft: int, hold_aft_ctrlpts: list, cross_frames_transom):
+        points_array = np.empty([laft, self.n_evalpts, 3])
+        for x in np.arange(0, laft):
+            _ctrpts = lin_interpolate((cross_frames_transom, hold_aft_ctrlpts), x, self.height)
+            frame = CrossSection(_ctrpts)
+            
+            points = frame.points
+            points_array[x] = points
+            c, t, b = (-0.2, 1, 0)
+            spline = KochanekSpline(points, tension=[t, t, t], continuity=[c, c, c], n_points=1000)
+            self.pl.add_mesh(spline, color="r")
+            self.pl.add_mesh(PolyData(frame.points), color="r", point_size=1, render_points_as_spheres=True)
+        return points_array
+
+    def midship(self, hold_aft_points, hold_fore_points, lmid: int = 2):
+        info = Info()
+        mid = Properties(self.height, lmid, info)
+        mid.memory = np.array(hold_aft_points), 0
+        mid.memory = np.array(hold_fore_points), 1
+        return mid.memory
+
+    def forward(self, hold_fore_points):
+        c, t, b = (-0.2, 1, 0)
+        points_array = np.empty([len(self.wp.forward), self.n_evalpts, 3])
+        for x in range(len(self.wp.forward)):
+            points = new_cross_fore(self.wp.forward, np.array(hold_fore_points), x)
+            spline = KochanekSpline(points, tension=[t, t, t], continuity=[c, c, c], n_points=1000)
+            self.pl.add_mesh(spline, color="r")
+            self.pl.add_mesh(PolyData(points), color="r", point_size=1, render_points_as_spheres=True)
+            points_array[x] = points
+        return points_array
+
+    def visualize(self):
+        self.pl.show_bounds(location='outer', font_size=20, use_2d=True)
+        self.pl.show()
+
+    def close_visualisation(self):
+        self.pl.close()
+
 
 if __name__ == '__main__':
     from pyvista import KochanekSpline, PolyData, Spline, Plotter, Line, CircularArc, MultipleLines

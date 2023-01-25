@@ -7,7 +7,8 @@ import numpy as np
 from scipy.integrate import simpson
 
 class Properties:
-    def __init__(self, ul : int, n_frames : int) -> None:
+    def __init__(self, ul : int, n_frames : int, info) -> None:
+        self.info = info
         self.ul = ul
         self._n_evalpts = 100
         self._memory = np.empty([n_frames, self.n_evalpts, 3])
@@ -48,7 +49,9 @@ class Properties:
     def transom_area(self):
         """immersed transom area
         """
-        return self.section_area[0][1]
+        area = self.section_area[0][1]
+        self.info.transom_area = area
+        return area
 
     def volume(self) -> float:
         """This function is soon to be depricated.
@@ -69,27 +72,85 @@ class Properties:
 
     def volume_scipy(self) -> float:
         x = np.linspace(0, self.section_area[:,0][-1] - self.section_area[:,0][0] , len(self.section_area[:,1]))
-        return simpson(self.section_area[:,1], x)
+        volume = simpson(self.section_area[:,1], x)
+        self.info.volume = volume
+        return volume
 
     def statical_moment(self) -> float:
-        return np.sum(self.section_area[:,0] * self.section_area[:,1])
+        statical_moment = np.sum(self.section_area[:,0] * self.section_area[:,1])
+        self.info.statical_moment = statical_moment
+        return statical_moment
 
     def lcb(self) -> float:
-        return self.statical_moment() / self.volume_scipy()
+        lcb = self.statical_moment() / self.volume_scipy()
+        self.info.lcb = lcb
+        return lcb
+
+    def lcb_ratio(self, lwl) -> float:
+        """lcb in percentage of half the lwl
+        """
+        lpp_2 = lwl / 2
+        return (self.lcb() - lpp_2) / lpp_2
 
     def total_area(self) -> float:
         return np.sum(self.section_area[:,1])
 
     def prismatic_coefficient(self, area_wbfrm : float, lwl: float) -> float:
-        return self.volume_scipy() / (area_wbfrm * lwl)
+        c_p = self.volume_scipy() / (area_wbfrm * lwl)
+        self.info.prismatic_coefficient = c_p
+        return c_p
 
     def block_coefficient(self, lwl, boa, draft) -> float:
         """Block coefficient defined at the draft.
         """
-        return self.volume_scipy() / (lwl * boa * draft)
+        c_b = self.volume_scipy() / (lwl * boa * draft)
+        self.info.block_coefficient = c_b
+        return c_b
 
     def ie(self, boa, lfore):
         """half angle of entrance in degree
         """
         RAD = 180 / np.pi
-        return np.tanh(boa / lfore) * RAD
+        ie = np.tanh(boa / lfore) * RAD
+        self.info.ie = ie
+        return ie
+
+class Info:
+    def __init__(self) -> None:
+        self.laft = None
+        self.lhold = None
+        self.lfore = None
+        self.lwl = None
+        self.half_boa = None
+        self.draft = None
+        self.transom_area = None
+        self.volume = None
+        self.statical_moment = None
+        self.lcb = None
+        self.prismatic_coefficient = None
+        self.block_coefficient = None
+        self.ie = None
+        self.c_wp = None
+        self.c_m = None
+        self.error = {}
+
+    def __str__(self) -> str:
+        return f"{self.transom_area = :.2f} \n {self.volume = :.2f} \n {self.statical_moment = :.2f} \n {self.lcb = :.2f} \n {self.prismatic_coefficient = :.2f} \n {self.block_coefficient = :.2f} \n {self.ie = :.2f}"
+
+    def __repr__(self) -> str:
+        return f'Info(transom_area={self.transom_area}, volume={self.volume}, statical_moment={self.statical_moment}, lcb={self.lcb}, prismatic_coefficient={self.prismatic_coefficient}, block_coefficient={self.block_coefficient}, ie={self.ie})'
+    
+    def __lwl(self) -> float:
+        if self.laft != None and self.lhold != None and self.lfore != None:
+            return sum((self.laft, self.lhold, self.lfore))
+        else:
+            return None  
+
+    def print_info(self) -> dict:
+        for key, value in self.__dict__.items():
+            print(f"{key} = {value}")
+    
+
+if __name__ == "__main__":
+    info = Info()
+    print(info)

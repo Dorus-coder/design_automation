@@ -146,6 +146,7 @@ class HMInput:
     h_b: float = 0.0001 # centre of bulb area above keel [m]
     a_bt: float = 0.0001 # transverse bulb area [m^2]
     reward_correct_input: int = 0
+    
     def __post_init__(self):
         if self.t_f < 0:
             self.t_a = 50

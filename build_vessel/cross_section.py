@@ -79,6 +79,7 @@ class BuildFrames:
         self.n_evalpts = 100
         
         self.pl = Plotter()
+        self.pl.set_background("royalblue", top="aliceblue")
 
     def aft(self, laft: int, hold_aft_ctrlpts: list, cross_frames_transom):
         points_array = np.empty([laft, self.n_evalpts, 3])
